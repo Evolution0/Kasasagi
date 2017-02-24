@@ -42,9 +42,9 @@ def parse_search(soup, limit=None) -> dict:
 
     for title, cover, genre, intro in zip(titles, covers, genres, intros):
         novels.update({title: {
-            "cover": cover,
-            "genre": genre,
-            "intro": intro
+            "cover": cover if cover != 'http://www.novelupdates.com/img/noimagefound.jpg' else None,
+            "genre": genre if genre else None,
+            "intro": intro if intro else None
         }})
     return novels
 
