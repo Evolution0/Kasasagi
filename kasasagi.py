@@ -49,6 +49,7 @@ async def get_reading_list(url: str) -> dict:
             'last': status[0][2:],
             'current': status[1][:-2]
         }})
+    session.close()
     return novels
 
 
@@ -110,7 +111,7 @@ async def get_all_chapters(url: str) -> dict:
             chapter_list += await get_chapter_list(page_url)
 
     chapters = {'chapters': chapter_list}
-
+    session.close()
     return chapters
 
 
@@ -126,7 +127,7 @@ async def search(term: str, limit=None) -> dict:
         search_soup = BeautifulSoup(await response.text(), 'lxml')
 
     # TODO: Pass the soup object off to Raitonoberu
-
+    session.close()
     return {'error': 'unimplemented'}
 
 
@@ -1472,7 +1473,7 @@ async def advanced_search(language=None, novel_type=None, genre=None, genre_ao=N
         adv_search_soup = BeautifulSoup(await response.text(), 'lxml')
 
     # TODO: Pass the soup object off to Raitonoberu
-
+    session.close()
     return {'error': 'unimplemented'}
 
 
@@ -1486,7 +1487,7 @@ async def get_latest_series(limit=None) -> dict:
 
     async with session.get(url, headers=headers) as response:
         latest_series_soup = BeautifulSoup(await response.text(), 'lxml')
-
+    session.close()
     return {'error': 'unimplemented'}
 
 
@@ -1500,7 +1501,7 @@ async def get_series_ranking(limit=None) -> dict:
 
     async with session.get(url, headers=headers) as response:
         series_ranking_soup = BeautifulSoup(await response.text(), 'lxml')
-
+    session.close()
     return {'error': 'unimplemented'}
 
 
