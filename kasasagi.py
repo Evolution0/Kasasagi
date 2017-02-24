@@ -171,7 +171,7 @@ async def advanced_search(language=None, novel_type=None, genre: hug.types.delim
                           readers_mm: hug.types.one_of('min, max')=None, tags_include: hug.types.delimited_list(',')=None,
                           tags_ao: hug.types.one_of('and, or')=None, tags_exclude: hug.types.delimited_list(',')=None,
                           last_release=None, last_release_mm: hug.types.one_of('min, max')=None,
-                          complete: hug.types.multi(None, hug.types.one_of('yes, no'))=None, sort=None, order=None,
+                          complete: hug.types.one_of('yes, no')=None, sort=None, order=None,
                           limit=None) -> dict:
     """https://nu-kasasagi.herokuapp.com/v1/advanced_search/?arg1=value&?arg2=value, etc (See Inputs)"""
     await init()
