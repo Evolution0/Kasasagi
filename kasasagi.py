@@ -33,7 +33,7 @@ async def init():
 @hug.cli()
 @hug.get(versions=1, output=hug.output_format.pretty_json)
 async def get_reading_list(url: str) -> dict:
-    """https://nu-kasasagi.herokuapp.com/v1/get_reading_list/?url=<Reading List URL>"""
+    """https://nu-kasasagi.herokuapp.com/v1/get_reading_list/?url=READING_LIST_URL"""
     await init()
     novels = OrderedDict({})
     async with session.get(url, headers=headers) as response:
@@ -56,7 +56,7 @@ async def get_reading_list(url: str) -> dict:
 @hug.cli()
 @hug.get(versions=1, output=hug.output_format.pretty_json)
 async def get_all_chapters(url: str) -> dict:
-    """https://nu-kasasagi.herokuapp.com/v1/get_all_chapters/?url=<Novel Page URL>"""
+    """https://nu-kasasagi.herokuapp.com/v1/get_all_chapters/?url=NOVEL_PAGE_URL"""
     await init()
 
     async def get_chapter_list(chapter_url: str) -> list:
