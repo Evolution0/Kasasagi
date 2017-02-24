@@ -34,14 +34,16 @@ def parse_search(soup, limit=None) -> dict:
     intro_clean = lambda string: string.text.strip().replace('... more>>', '').replace(' <<less', '')
 
     titles = [title.text for title in soup.find_all('span', {'class': 'entry-title'})]
+    links = [link.get('href', None) for link in soup.find_all('a', {'class': 'w-blog-entry-link'})]
     covers = [cover.get('src', None) for cover in soup.find_all('img', {'class': 'wp-post-image'})]
     genres = [genre.split() for genre in [genre.text for genre in soup.find_all('span', {'class': 's-genre'})]]
     intros = [intro_clean(intro) for intro in soup.find_all('div', {'class': 'w-blog-entry-short'})]
 
     novels = OrderedDict({})
 
-    for title, cover, genre, intro in zip(titles, covers, genres, intros):
+    for title, link, cover, genre, intro in zip(titles, links, covers, genres, intros):
         novels.update({title: {
+            "link": link,
             "cover": cover if cover != 'http://www.novelupdates.com/img/noimagefound.jpg' else None,
             "genre": genre if genre else None,
             "intro": intro if intro else None
