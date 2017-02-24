@@ -30,13 +30,13 @@ async def init():
 
 
 @hug.local()
-async def parse_search(soup, limit=None) -> dict:
+def parse_search(soup, limit=None) -> dict:
     intro_clean = lambda string: string.text.strip().replace('... more>>', '').replace(' <<less', '')
 
-    titles = [await title.text for title in soup.find_all('span', {'class': 'entry-title'})]
-    covers = [await cover.get('src', None) for cover in soup.find_all('img', {'class': 'wp-post-image'})]
-    genres = [await genre.split() for genre in [await genre.text for genre in soup.find_all('span', {'class': 's-genre'})]]
-    intros = [await intro_clean(intro) for intro in soup.find_all('div', {'class': 'w-blog-entry-short'})]
+    titles = [title.text for title in soup.find_all('span', {'class': 'entry-title'})]
+    covers = [cover.get('src', None) for cover in soup.find_all('img', {'class': 'wp-post-image'})]
+    genres = [genre.split() for genre in [genre.text for genre in soup.find_all('span', {'class': 's-genre'})]]
+    intros = [intro_clean(intro) for intro in soup.find_all('div', {'class': 'w-blog-entry-short'})]
 
     novels = OrderedDict({})
 
