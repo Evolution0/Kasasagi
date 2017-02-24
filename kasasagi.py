@@ -153,7 +153,7 @@ async def search(term: str, limit=None) -> dict:
     if 'No posts were found.' in search_soup.find('div', {'class': 'l-content'}).text:
         search_result = {'info': 'no posts were found'}
     else:
-        search_result = await parse_search(search_soup)
+        search_result = parse_search(search_soup)
 
     return search_result
 
