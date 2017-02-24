@@ -30,6 +30,26 @@ async def init():
 
 
 @hug.local()
+async def parse_search(soup, limit=None) -> dict:
+    intro_clean = lambda string: string.text.strip().replace('... more>>', '').replace(' <<less', '')
+
+    titles = [title.text for title in soup.find_all('span', {'class': 'entry-title'})]
+    covers = [cover.get('src', None) for cover in soup.find_all('img', {'class': 'wp-post-image'})]
+    genres = [genre.split() for genre in [genre.text for genre in soup.find_all('span', {'class': 's-genre'})]]
+    intros = [intro_clean(intro) for intro in soup.find_all('div', {'class': 'w-blog-entry-short'})]
+
+    novels = OrderedDict({})
+
+    for title, cover, genre, intro in zip(titles, covers, genres, intros):
+        novels.update({title: {
+            "cover": cover,
+            "genre": genre,
+            "intro": intro
+        }})
+    return novels
+
+
+@hug.local()
 @hug.cli()
 @hug.get(versions=1, output=hug.output_format.pretty_json)
 async def get_reading_list(url: str) -> dict:
@@ -123,12 +143,19 @@ async def search(term: str, limit=None) -> dict:
 
     url = f'http://www.novelupdates.com/?s={term}&post_type=seriesplans'
 
-    async with session.get(url, headers=headers) as response:
-        search_soup = BeautifulSoup(await response.text(), 'lxml')
+    search_filter = SoupStrainer('div', {'class': 'w-blog-list'})
 
-    # TODO: Pass the soup object off to Raitonoberu
+    async with session.get(url, headers=headers) as response:
+        search_soup = BeautifulSoup(await response.text(), 'lxml', parse_only=search_filter)
+
     session.close()
-    return {'error': 'unimplemented'}
+
+    if 'No posts were found.' in search_soup.find('div', {'class': 'l-content'}).text:
+        result = {'info': 'no posts were found'}
+    else:
+        result = await parse_search(search_soup)
+
+    return result
 
 
 @hug.cli()
@@ -1469,8 +1496,10 @@ async def advanced_search(language=None, novel_type=None, genre=None, genre_ao=N
         'order': '',    # Sorting Order
     }
 
+    search_filter = SoupStrainer('div', {'class': 'w-blog-list'})
+
     async with session.get(base_url, params=urlargs, headers=headers) as response:
-        adv_search_soup = BeautifulSoup(await response.text(), 'lxml')
+        adv_search_soup = BeautifulSoup(await response.text(), 'lxml', parse_only=search_filter)
 
     # TODO: Pass the soup object off to Raitonoberu
     session.close()
