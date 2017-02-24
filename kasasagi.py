@@ -151,11 +151,11 @@ async def search(term: str, limit=None) -> dict:
     session.close()
 
     if 'No posts were found.' in search_soup.find('div', {'class': 'l-content'}).text:
-        result = {'info': 'no posts were found'}
+        search_result = {'info': 'no posts were found'}
     else:
-        result = await parse_search(search_soup)
+        search_result = await parse_search(search_soup)
 
-    return result
+    return search_result
 
 
 @hug.cli()
