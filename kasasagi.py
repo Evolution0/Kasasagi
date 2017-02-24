@@ -143,10 +143,10 @@ async def search(term: str, limit=None) -> dict:
 
     url = f'http://www.novelupdates.com/?s={term}&post_type=seriesplans'
 
-    search_filter = SoupStrainer('div', {'class': 'w-blog-list'})
+    # search_filter = SoupStrainer('div', {'class': 'w-blog-list'})
 
     async with session.get(url, headers=headers) as response:
-        search_soup = BeautifulSoup(await response.text(), 'lxml', parse_only=search_filter)
+        search_soup = BeautifulSoup(await response.text(), 'lxml')
 
     session.close()
 
