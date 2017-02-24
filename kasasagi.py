@@ -7,7 +7,7 @@ from json2html import *
 import aiohttp
 import hug
 
-__version__ = "0.5.0"
+__version__ = "0.5.3"
 __author__ = 'Anthony Forsberg'
 __license__ = 'MIT'
 __copyright__ = 'Copyright 2017 Anthony Forsberg'
@@ -140,15 +140,15 @@ async def get_all_chapters(url: str) -> dict:
 @hug.cli()
 @hug.get(versions=1, output=hug.output_format.pretty_json)
 async def search(term: str, limit=None) -> dict:
-    """Search Function"""
+    """https://nu-kasasagi.herokuapp.com/v1/search/?term=SEARCH_TERMS"""
     await init()
 
     url = f'http://www.novelupdates.com/?s={term}&post_type=seriesplans'
 
-    # search_filter = SoupStrainer('div', {'class': 'w-blog-list'})
+    search_filter = SoupStrainer('div', {'class': 'w-blog-list'})
 
     async with session.get(url, headers=headers) as response:
-        search_soup = BeautifulSoup(await response.text(), 'lxml')
+        search_soup = BeautifulSoup(await response.text(), 'lxml', parse_only=search_filter)
 
     session.close()
 
@@ -162,11 +162,13 @@ async def search(term: str, limit=None) -> dict:
 
 @hug.cli()
 @hug.get(versions=1, output=hug.output_format.pretty_json)
-async def advanced_search(language=None, novel_type=None, genre=None, genre_ao=None, releases=None, releases_mm=None,
-                          frequency=None, frequency_mm=None, rating=None, rating_mm=None, ratings=None, ratings_mm=None,
-                          readers=None, readers_mm=None, tags_include=None, tags_ao=None, tags_exclude=None,
-                          last_release=None, last_release_mm=None, complete=None, sort=None, order=None, limit=None) -> dict:
-    """Advanced Search Function"""
+async def advanced_search(language=None, novel_type=None, genre: hug.types.delimited_list(',')=None, genre_ao=None,
+                          releases=None, releases_mm=None, frequency=None, frequency_mm=None, rating=None,
+                          rating_mm=None, ratings=None, ratings_mm=None, readers=None, readers_mm=None,
+                          tags_include: hug.types.delimited_list(',')=None, tags_ao=None,
+                          tags_exclude: hug.types.delimited_list(',')=None, last_release=None, last_release_mm=None,
+                          complete=None, sort=None, order=None, limit=None) -> dict:
+    """https://nu-kasasagi.herokuapp.com/v1/advanced_search/?arg1=value&?arg2=value, etc (See Inputs)"""
     await init()
 
     base_url = 'http://www.novelupdates.com/series-finder/?sf=1'
@@ -1503,9 +1505,14 @@ async def advanced_search(language=None, novel_type=None, genre=None, genre_ao=N
     async with session.get(base_url, params=urlargs, headers=headers) as response:
         adv_search_soup = BeautifulSoup(await response.text(), 'lxml', parse_only=search_filter)
 
-    # TODO: Pass the soup object off to Raitonoberu
     session.close()
-    return {'error': 'unimplemented'}
+
+    if 'No posts were found.' in adv_search_soup.find('div', {'class': 'l-content'}).text:
+        search_result = {'info': 'no posts were found'}
+    else:
+        search_result = parse_search(adv_search_soup)
+
+    return search_result
 
 
 @hug.cli()
