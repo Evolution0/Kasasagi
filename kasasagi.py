@@ -82,9 +82,9 @@ async def get_all_chapters(url: str) -> dict:
     """https://nu-kasasagi.herokuapp.com/v1/get_all_chapters/?url=NOVEL_PAGE_URL"""
     await init()
 
-    async def get_chapter_list(chapter_url: str) -> list:
+    async def get_chapter_list(chapter_url: str) -> dict:
 
-        chapter_list = OrderedDict({})
+        chapters_dict = {}
 
         async with session.get(chapter_url, headers=headers) as chapter_response:
             chapter_list_soup = BeautifulSoup(await chapter_response.text(), 'lxml', parse_only=table_filter)
@@ -94,13 +94,13 @@ async def get_all_chapters(url: str) -> dict:
         releases = chapter_list_soup.find_all('a', href=regex.compile('http://www\.novelupdates\.com/group/'))
 
         for chapter, release in zip(latest_chapters[1::2], releases):
-            chapter_list.update({
+            chapters_dict.update({
                 'chapter_name': chapter.text,
                 'chapter_link': chapter['href'],
                 'release_group': release.text
             })
 
-        return chapter_list
+        return chapters_dict
 
     if 'series' not in url:
         return {'error': 'Not a valid novel url'}
