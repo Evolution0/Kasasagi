@@ -91,7 +91,7 @@ async def get_all_chapters(url: str) -> dict:
 
         latest = chapter_list_soup.find('table', {'id': 'myTable'})
         latest_chapters = latest.find_all('a', {'class': 'chp-release'})
-        releases = chapter_list_soup.find_all('a', {'href': regex.compile(r'group')})
+        releases = chapter_list_soup.find_all('a', href=regex.compile('http://www\.novelupdates\.com/group/'))
 
         for chapter, release in zip(latest_chapters[1::2], releases):
             chapter_list.update({
