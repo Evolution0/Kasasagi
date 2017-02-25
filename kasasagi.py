@@ -24,13 +24,15 @@ async def init():
     global session
     global headers
     global table_filter
+    global base_url
     session = aiohttp.ClientSession()
     headers = {'user_agent': '{}/{} (https://github.com/Evolution0)'.format(__title__, __version__)}
     table_filter = SoupStrainer('table')
+    base_url = 'http://www.novelupdates.com/'
 
 
 @hug.local()
-def parse_search(soup, limit=None) -> dict:
+def parse_search(soup, limit=None) -> list:
     intro_clean = lambda string: string.text.strip().replace('... more>>', '').replace(' <<less', '')
 
     titles = [title.text for title in soup.find_all('span', {'class': 'entry-title'})]
@@ -39,16 +41,29 @@ def parse_search(soup, limit=None) -> dict:
     genres = [genre.split() for genre in [genre.text for genre in soup.find_all('span', {'class': 's-genre'})]]
     intros = [intro_clean(intro) for intro in soup.find_all('div', {'class': 'w-blog-entry-short'})]
 
-    novels = OrderedDict({})
+    # novels = OrderedDict({})
+    novels = []
 
     for title, link, cover, genre, intro in zip(titles, links, covers, genres, intros):
-        novels.update({title: {
-            "link": link,
-            "cover": cover if cover != 'http://www.novelupdates.com/img/noimagefound.jpg' else None,
-            "genre": genre if genre else None,
-            "intro": intro if intro else None
-        }})
+        novels.append({
+            'title': title,
+            'link': link,
+            'cover': cover if cover != 'http://www.novelupdates.com/img/noimagefound.jpg' else None,
+            'genre': genre if genre else None,
+            'intro': intro if intro else None
+        })
+
     return novels
+
+
+@hug.local()
+def parse_latest(soup, limit=None) -> dict:
+    pass
+
+
+@hug.local()
+def parse_ranking(soup, limit=None) -> dict:
+    pass
 
 
 @hug.local()
@@ -119,11 +134,11 @@ async def get_all_chapters(url: str) -> dict:
     if gap:
         gap = gap.findNext('a')
         final_page = regex.sub('\D', '', gap['href'])
-        page_urls = ['{}?pg={}'.format(url, i) for i in range(1, int(final_page) + 1)]
+        page_urls = [f'{url}?pg={i}' for i in range(1, int(final_page) + 1)]
     elif pagination:
         page_nums = novel_soup.find_all('a', text=regex.compile(r'^[0-6]'))
         page_nums = [num.text for num in page_nums]
-        page_urls = ['{}?pg={}'.format(url, i) for i in range(1, int(max(page_nums)) + 1)]
+        page_urls = [f'{url}?pg={i}' for i in range(1, int(max(page_nums)) + 1)]
     else:
         single = True
 
@@ -151,21 +166,47 @@ async def search(term: str, limit=None) -> dict:
     """https://nu-kasasagi.herokuapp.com/v1/search/?term=SEARCH_TERMS"""
     await init()
 
-    url = f'http://www.novelupdates.com/?s={term}&post_type=seriesplans'
+    url = f'{base_url}/?s={term}&post_type=seriesplans'
 
-    search_filter = SoupStrainer('div', {'class': 'w-blog-list'})
+    search_filter = SoupStrainer('div', {'class': 'l-content'})
 
     async with session.get(url, headers=headers) as response:
         search_soup = BeautifulSoup(await response.text(), 'lxml', parse_only=search_filter)
 
-    session.close()
+    found = search_soup.find('div', {'class': 'w-blog-entry-h'})
 
-    if 'No posts were found.' in search_soup.find('div', {'class': 'l-content'}).text:
+    search_result = []
+
+    if found is None:
         search_result = {'info': 'no posts were found'}
     else:
-        search_result = parse_search(search_soup)
+        search_result.extend(parse_search(search_soup))
 
-    return search_result
+        nav = search_soup.find('div', {'class': 'digg_pagination'})
+        next_page = nav.find('a', {'class': 'next'})
+        dots = nav.find('span', {'class': 'dots'})
+        if next_page:
+            if dots:
+                last_page = dots.findNext('a').text
+                pages = [f'{base_url}/page/{page}/?s={term}&post_type=seriesplans' for page in range(1, int(last_page))]
+            else:
+                last_page = 3
+                pages = [f'{base_url}/page/{page}/?s={term}&post_type=seriesplans' for page in range(1, int(last_page))]
+
+        if pages:
+            for page in pages:
+                async with session.get(page, headers=headers) as response:
+                    if response.status == 200:
+                        search_soup = BeautifulSoup(await response.text(), 'lxml', parse_only=search_filter)
+                        search_result.extend(parse_search(search_soup))
+
+    search_results = {
+        'result_count': len(search_result),
+        'results': search_result
+    }
+
+    session.close()
+    return search_results
 
 
 @hug.cli()
