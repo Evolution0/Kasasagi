@@ -2,3 +2,5 @@
 *.iml
 *.floo
 .flooignore
+*.pyc
+*.log
