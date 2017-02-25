@@ -89,10 +89,8 @@ async def get_all_chapters(url: str) -> dict:
             latest = chapter_list_soup.find('table', {'id': 'myTable'})
             latest_chapters = latest.find_all('a', {'class': 'chp-release'})
 
-            chapter_urls = []
-            for chapter in latest_chapters[1::2]:
-                real_url = chapter['href']
-                chapter_urls.append(real_url)
+            chapter_urls = ['{{{0}: {1}}}'.format(chapter.text, chapter['href']) for chapter in latest_chapters[1::2]]
+
             return chapter_urls
 
     if 'series' not in url:
@@ -119,8 +117,7 @@ async def get_all_chapters(url: str) -> dict:
     elif pagination:
         page_nums = novel_soup.find_all('a', text=regex.compile(r'^[0-6]'))
         page_nums = [num.text for num in page_nums]
-        # page_urls = ['{}?pg={}'.format(url, i) for i in range(1, int(max(page_nums)) + 1)]
-        page_urls = [f'{url}?pg={i}' for i in range(1, int(max(page_nums)) + 1)]
+        page_urls = ['{}?pg={}'.format(url, i) for i in range(1, int(max(page_nums)) + 1)]
     else:
         single = True
 
@@ -132,7 +129,13 @@ async def get_all_chapters(url: str) -> dict:
         for page_url in page_urls:
             chapter_list += await get_chapter_list(page_url)
 
-    chapters = {'chapters': chapter_list}
+    novel_title = novel_soup.find('div', {'class': 'seriestitlenu'}).text
+
+    chapters = {
+        'name': novel_title,
+        'chapters': [chapter_list]
+    }
+
     session.close()
     return chapters
 
@@ -172,7 +175,7 @@ async def advanced_search(language=None, novel_type=None, genre: hug.types.delim
                           tags_ao: hug.types.one_of(['and', 'or'])=None, tags_exclude: hug.types.delimited_list(',')=None,
                           last_release=None, last_release_mm: hug.types.one_of(['min', 'max'])=None,
                           complete: hug.types.one_of(['yes', 'no'])=None, sort=None, order=None,
-                          limit=None) -> dict:
+                          limit: hug.types.number=None) -> dict:
     """https://nu-kasasagi.herokuapp.com/v1/advanced_search/?arg1=value&?arg2=value, etc (See Inputs)"""
     await init()
 
