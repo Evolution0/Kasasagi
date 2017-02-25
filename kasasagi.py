@@ -89,7 +89,7 @@ async def get_all_chapters(url: str) -> dict:
             latest = chapter_list_soup.find('table', {'id': 'myTable'})
             latest_chapters = latest.find_all('a', {'class': 'chp-release'})
 
-            chapter_urls = ['{{{0}: {1}}}'.format(chapter.text, chapter['href']) for chapter in latest_chapters[1::2]]
+            chapter_urls = ["'chapter_name': {0}, 'chapter_link': {1}".format(chapter.text, chapter['href']) for chapter in latest_chapters[1::2]]
 
             return chapter_urls
 
@@ -133,7 +133,7 @@ async def get_all_chapters(url: str) -> dict:
 
     chapters = {
         'name': novel_title,
-        'chapters': [chapter_list]
+        'chapters': chapter_list
     }
 
     session.close()
