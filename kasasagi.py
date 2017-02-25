@@ -82,7 +82,7 @@ async def get_all_chapters(url: str) -> dict:
     """https://nu-kasasagi.herokuapp.com/v1/get_all_chapters/?url=NOVEL_PAGE_URL"""
     await init()
 
-    chapters_dict = OrderedDict({})
+    chapters_list = []
 
     async def get_chapter_list(chapter_url: str):
         async with session.get(chapter_url, headers=headers) as chapter_response:
@@ -93,10 +93,11 @@ async def get_all_chapters(url: str) -> dict:
         releases = chapter_list_soup.find_all('a', href=regex.compile('http://www\.novelupdates\.com/group/'))
 
         for chapter, release in zip(latest_chapters[1::2], releases):
-            chapters_dict.update({chapter.text: {
+            chapters_list.append({
+                'chapter_name': chapter.text,
                 'chapter_link': chapter['href'],
                 'release_group': release.text
-            }})
+            })
 
     if 'series' not in url:
         return {'error': 'Not a valid novel url'}
@@ -136,7 +137,8 @@ async def get_all_chapters(url: str) -> dict:
 
     chapters = {
         'name': novel_title,
-        'chapters': chapters_dict
+        'chapter_count': len(chapters_list),
+        'chapters': chapters_list
     }
 
     session.close()
