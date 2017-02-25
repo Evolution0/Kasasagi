@@ -83,15 +83,24 @@ async def get_all_chapters(url: str) -> dict:
     await init()
 
     async def get_chapter_list(chapter_url: str) -> list:
+
+        chapter_list = OrderedDict({})
+
         async with session.get(chapter_url, headers=headers) as chapter_response:
             chapter_list_soup = BeautifulSoup(await chapter_response.text(), 'lxml', parse_only=table_filter)
 
-            latest = chapter_list_soup.find('table', {'id': 'myTable'})
-            latest_chapters = latest.find_all('a', {'class': 'chp-release'})
+        latest = chapter_list_soup.find('table', {'id': 'myTable'})
+        latest_chapters = latest.find_all('a', {'class': 'chp-release'})
+        releases = chapter_list_soup.find_all('a', {'href': regex.compile(r'group')})
 
-            chapter_urls = ["'chapter_name': {0}, 'chapter_link': {1}".format(chapter.text, chapter['href']) for chapter in latest_chapters[1::2]]
+        for chapter, release in zip(latest_chapters[1::2], releases):
+            chapter_list.update({
+                'chapter_name': chapter.text,
+                'chapter_link': chapter['href'],
+                'release_group': release.text
+            })
 
-            return chapter_urls
+        return chapter_list
 
     if 'series' not in url:
         return {'error': 'Not a valid novel url'}
