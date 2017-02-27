@@ -1,5 +1,4 @@
 gunicorn==19.6.0
-gevent==1.2.1
 json2html==1.1.1
 hug==2.2.0
 aiohttp==1.3.1
