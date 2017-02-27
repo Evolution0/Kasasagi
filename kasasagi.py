@@ -19,6 +19,12 @@ table_filter = None
 
 
 @hug.local()
+async def async_iter(iterable):
+    for item in iterable:
+        yield item
+
+
+@hug.local()
 async def init():
     """Manual initialization function due to Hug's broken: @hug.startup()"""
     global session
@@ -32,25 +38,25 @@ async def init():
 
 
 @hug.local()
-def parse_search(soup, limit=None) -> list:
-    intro_clean = lambda string: string.text.strip().replace('... more>>', '').replace(' <<less', '')
+async def parse_search(soup, limit=None):
+    intro_clean = lambda string: regex.sub(r'(\.\.\.\smore>>|\s<<less)', '', string.text.strip())
 
-    titles = [title.text for title in soup.find_all('span', {'class': 'entry-title'})]
-    links = [link.get('href', None) for link in soup.find_all('a', {'class': 'w-blog-entry-link'})]
-    covers = [cover.get('src', None) for cover in soup.find_all('img', {'class': 'wp-post-image'})]
-    genres = [genre.split() for genre in [genre.text for genre in soup.find_all('span', {'class': 's-genre'})]]
-    intros = [intro_clean(intro) for intro in soup.find_all('div', {'class': 'w-blog-entry-short'})]
+    titles = [title.text async for title in async_iter(soup.find_all('span', {'class': 'entry-title'}))]
+    links = [link.get('href', None) async for link in async_iter(soup.find_all('a', {'class': 'w-blog-entry-link'}))]
+    covers = [cover.get('src', None) async for cover in async_iter(soup.find_all('img', {'class': 'wp-post-image'}))]
+    genres_block = [genre.text async for genre in async_iter(soup.find_all('span', {'class': 's-genre'}))]
+    genres = [genre.split() async for genre in async_iter(genres_block)]
+    intros = [intro_clean(intro) async for intro in async_iter(soup.find_all('div', {'class': 'w-blog-entry-short'}))]
 
-    # novels = OrderedDict({})
     novels = []
 
-    for title, link, cover, genre, intro in zip(titles, links, covers, genres, intros):
+    async for title, link, cover, genre, intro in async_iter(zip(titles, links, covers, genres, intros)):
         novels.append({
             'title': title,
             'link': link,
             'cover': cover if cover != 'http://www.novelupdates.com/img/noimagefound.jpg' else None,
-            'genre': genre if genre else None,
-            'intro': intro if intro else None
+            'genre': genre or None,
+            'intro': intro or None
         })
 
     return novels
@@ -164,6 +170,8 @@ async def get_all_chapters(url: str) -> dict:
 @hug.get(versions=1, output=hug.output_format.pretty_json)
 async def search(term: str, limit=None) -> dict:
     """https://nu-kasasagi.herokuapp.com/v1/search/?term=SEARCH_TERMS"""
+    # TODO: Slows down far too much per page of results
+
     await init()
 
     url = f'{base_url}/?s={term}&post_type=seriesplans'
@@ -180,25 +188,29 @@ async def search(term: str, limit=None) -> dict:
     if found is None:
         search_result = {'info': 'no posts were found'}
     else:
-        search_result.extend(parse_search(search_soup))
+        search_result.extend(await parse_search(search_soup))
 
         nav = search_soup.find('div', {'class': 'digg_pagination'})
         next_page = nav.find('a', {'class': 'next'})
         dots = nav.find('span', {'class': 'dots'})
+
+        async def page_gen(num):
+                return f'{base_url}/page/{num}/?s={term}&post_type=seriesplans'
+
         if next_page:
             if dots:
                 last_page = dots.findNext('a').text
-                pages = [f'{base_url}/page/{page}/?s={term}&post_type=seriesplans' for page in range(1, int(last_page))]
+                pages = [await page_gen(page) async for page in async_iter(range(1, int(last_page)))]
             else:
                 last_page = 3
-                pages = [f'{base_url}/page/{page}/?s={term}&post_type=seriesplans' for page in range(1, int(last_page))]
+                pages = [await page_gen(page) async for page in async_iter(range(1, int(last_page)))]
 
         if pages:
-            for page in pages:
+            async for page in async_iter(pages):
                 async with session.get(page, headers=headers) as response:
                     if response.status == 200:
                         search_soup = BeautifulSoup(await response.text(), 'lxml', parse_only=search_filter)
-                        search_result.extend(parse_search(search_soup))
+                        search_result.extend(await parse_search(search_soup))
 
     search_results = {
         'result_count': len(search_result),
@@ -1577,8 +1589,13 @@ async def get_latest_series(limit=None) -> dict:
 
     url = 'http://www.novelupdates.com/latest-series/'
 
+    latest_filter = SoupStrainer('div', {'class': 'g-html'})
+
     async with session.get(url, headers=headers) as response:
-        latest_series_soup = BeautifulSoup(await response.text(), 'lxml')
+        latest_series_soup = BeautifulSoup(await response.text(), 'lxml', parse_only=latest_filter)
+
+
+
     session.close()
     return {'error': 'unimplemented'}
 
