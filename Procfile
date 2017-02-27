@@ -1,1 +1,1 @@
-web: gunicorn kasasagi:__hug_wsgi__
+web: gunicorn kasasagi:__hug_wsgi__ --preload --timeout 10 --worker-class gaiohttp
