@@ -32,7 +32,7 @@ async def init():
     global table_filter
     global base_url
     session = aiohttp.ClientSession()
-    headers = {'user_agent': '{}/{} (https://github.com/Evolution0)'.format(__title__, __version__)}
+    headers = {'user_agent': '{}/{} (https://github.com/Evolution0/Kasasagi)'.format(__title__, __version__)}
     table_filter = SoupStrainer('table')
     base_url = 'http://www.novelupdates.com/'
 
